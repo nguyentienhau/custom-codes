@@ -30,7 +30,7 @@
 
 					attributeKeys.forEach(function (key) {
 						result[key] = source[key] && source[key].copy();
-					})
+					});
 
 					return result;
 				}
@@ -142,10 +142,19 @@
 		target: String.prototype,
 		name: "toCapitalize",
 		value: function () {
-			return this.replace(/\b[a-z]/, function (letter) {
+			const regexp = /(\b|[.,; ])([a-z])/g;
+			return this.replace(regexp, function (_match, digit, letter) {
+				return digit + letter.toUpperCase();
+			});
+		}
+	},
+	{
+		target: String.prototype,
+		name: "toPascalCase",
+		value: function () {
+			const regexp = /(\b|\/|[_-])([a-z])/g;
+			return this.replace(regexp, function (_match, _digit, letter) {
 				return letter.toUpperCase();
-			}).replace(/([.,; ])([a-z])/g, function (match, digit, letter) {
-				return (digit + letter.toUpperCase()) || match;
 			});
 		}
 	},
@@ -153,8 +162,11 @@
 		target: String.prototype,
 		name: "toCamelCase",
 		value: function () {
-			return this.replace(/[_-]([a-z])/g, function (match, letter) {
-				return letter.toUpperCase() || match;
+			const regexp = /(\/|[_-])([a-z])/g;
+			return this.replace(regexp, function (_match, _digit, letter) {
+				return letter.toUpperCase();
+			}).replace(/\b([A-Z])/, function (_match, letter) {
+				return letter.toLowerCase();
 			});
 		}
 	},
@@ -162,8 +174,9 @@
 		target: String.prototype,
 		name: "toSnakeCase",
 		value: function () {
-			return this.replace(/([A-Z])/g, function (match, letter) {
-				return `_${letter.toLowerCase()}` || match;
+			const regexp = /(.?)([A-Z])/g;
+			return this.replace(regexp, function (_match, digit, letter) {
+				return (digit ? digit + "_" : "") + letter.toLowerCase();
 			});
 		}
 	},
@@ -171,8 +184,9 @@
 		target: String.prototype,
 		name: "format",
 		value: function (data = {}) {
-			return data.constructor === Object ? this.replace(/{([A-Za-z0-9_-]+)}/g, function (match, key) {
-				return data[key] || match;
+			const regexp = /{([A-Za-z0-9_-]+)}/g;
+			return data.constructor === Object ? this.replace(regexp, function (match, key) {
+				return Object.hasOwn(data, key) ? data[key] : match;
 			}) : this;
 		}
 	},
@@ -193,5 +207,6 @@
 		}
 	}
 ]).forEach(function (item) {
-	Object.defineProperty(item.target, item.name, { value: item.value, configurable: false, enumerable: false, writable: false });
+	const data = { value: item.value, configurable: false, enumerable: false, writable: false };
+	Object.defineProperty(item.target, item.name, data);
 });
