@@ -2,7 +2,7 @@
 
 const { Model } = require("sequelize");
 const { accountConfiguration } = require("../configurations");
-const { name, attributes } = accountConfiguration;
+const { modelName, modelAttributes } = accountConfiguration;
 
 class Account extends Model {
 	static associate(models) {
@@ -11,6 +11,6 @@ class Account extends Model {
 }
 
 module.exports = function (sequelize) {
-	Account.init(attributes, { sequelize, modelName: name, underscored: true });
+	Account.init(modelAttributes, { sequelize, modelName, underscored: true });
 	return Account;
 };

@@ -6,19 +6,10 @@ const pages = import.meta.glob("./pages/**/!(*.test.[jt]sx|*.lazy.[jt]sx)*.([jt]
 const lazyPages = import.meta.glob("./pages/**/*.lazy.([jt]sx)");
 const routes = getRoutes({ pages, lazyPages });
 const routeComponents = routes.map(function ({ path, component: Component, isLazyPage, ...other }) {
-	if (!isLazyPage) {
-		return <Route key={path} path={path} element={<Component />} {...other} errorElement={<ErrorBoundary />} />;
+	if (isLazyPage) {
+		return <Route key={path} path={path} lazy={async () => ({ Component: (await Component()).defa })} errorElement={<ErrorBoundary />} />;
 	} else if (typeof Component === "function") {
-		return (
-			<Route
-				key={path}
-				path={path}
-				lazy={async () => {
-					Component: (await Component()).defa;
-				}}
-				errorElement={<ErrorBoundary />}
-			/>
-		);
+		return <Route key={path} path={path} element={<Component />} {...other} errorElement={<ErrorBoundary />} />;
 	}
 });
 const NotFound = routes.find(({ path }) => path === "/not-found").component;
