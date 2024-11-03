@@ -1,7 +1,7 @@
 "use strict";
 
-const { AccountConfiguration } = require("../configurations");
-const { tableName, tableColumns } = AccountConfiguration;
+const { ProductConfiguration } = require("../configurations");
+const { tableName, tableColumns } = ProductConfiguration;
 
 module.exports = {
 	async up(queryInterface, _Sequelize) {
