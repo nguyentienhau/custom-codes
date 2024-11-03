@@ -1,24 +1,61 @@
 import { Route, RouterProvider, createBrowserRouter, createRoutesFromElements } from "react-router-dom";
-import PropTypes from "prop-types";
 import { AppContainer, ErrorBoundary } from "@/commons";
+
+// prettier-ignore
+function getRoutes({ pages, lazyPages }) {
+	return [...Object.keys(pages), ...Object.keys(lazyPages)].map(function (key) {
+		const result = { isLazyPage: false, path: "", component: null };
+		let path = key
+			.replace("./pages", "")
+			.replace(/\.(t|j)sx?$/, "")
+			/**
+			 * Replace group with ()
+			 */
+			.replace(/\(+[^()]+\)+\//g, "")
+			/**
+			 * Replace /index with /
+			 */
+			.replace(/\/index$/i, "/")
+			/**
+			 * Only lowercase the first letter. This allows the developer to use camelCase
+			 * dynamic paths while ensuring their standard routes are normalized to lowercase.
+			 */
+			.replace(/\b[A-Z]/, (firstLetter) => firstLetter.toLowerCase())
+			/**
+			 * Convert /[handle].js and /[...handle].js to /:handle.js
+			 */
+			.replace(/\[(?:[.]{3})?(\w+?)\]/g, (_match, param) => `:${param}`);
+
+		if (path.endsWith("/") && path !== "/") {
+			path = path.substring(0, path.length - 1);
+		}
+
+		if (!pages[key]?.default && !lazyPages[key]) {
+			// eslint-disable-next-line no-console
+			console.warn(`${key} doesn't export a default React component`);
+		}
+		if (pages[key]?.default) {
+			result.path = path;
+			result.component = pages[key].default;
+		} else if (lazyPages[key]) {
+			// Remove lazy suffix
+			result.path = path.replace(/\.lazy$/i, "").replace(/\/index$/i, "/");
+			result.isLazyPage = true;
+			result.component = lazyPages[key];
+		}
+
+		return result;
+	}).filter((route) => route.component);
+}
 
 const pages = import.meta.glob("./pages/**/!(*.test.[jt]sx|*.lazy.[jt]sx)*.([jt]sx)", { eager: true });
 const lazyPages = import.meta.glob("./pages/**/*.lazy.([jt]sx)");
 const routes = getRoutes({ pages, lazyPages });
 const routeComponents = routes.map(function ({ path, component: Component, isLazyPage, ...other }) {
-	if (!isLazyPage) {
-		return <Route key={path} path={path} element={<Component />} {...other} errorElement={<ErrorBoundary />} />;
+	if (isLazyPage) {
+		return <Route key={path} path={path} lazy={async () => ({ Component: (await Component()).defa })} errorElement={<ErrorBoundary />} />;
 	} else if (typeof Component === "function") {
-		return (
-			<Route
-				key={path}
-				path={path}
-				lazy={async () => {
-					Component: (await Component()).defa;
-				}}
-				errorElement={<ErrorBoundary />}
-			/>
-		);
+		return <Route key={path} path={path} element={<Component />} {...other} errorElement={<ErrorBoundary />} />;
 	}
 });
 const NotFound = routes.find(({ path }) => path === "/not-found").component;
@@ -47,60 +84,4 @@ const router = createBrowserRouter(
  */
 export default function Router({ children }) {
 	return <RouterProvider router={router}>{children}</RouterProvider>;
-}
-
-Router.propTypes = {
-	children: PropTypes.any
-};
-
-function getRoutes({ pages, lazyPages }) {
-	return [...Object.keys(pages), ...Object.keys(lazyPages)]
-		.map(function (key) {
-			let path = key
-				.replace("./pages", "")
-				.replace(/\.(t|j)sx?$/, "")
-				/**
-				 * Replace group with ()
-				 */
-				.replace(/\(+[^()]+\)+\//g, "")
-				/**
-				 * Replace /index with /
-				 */
-				.replace(/\/index$/i, "/")
-				/**
-				 * Only lowercase the first letter. This allows the developer to use camelCase
-				 * dynamic paths while ensuring their standard routes are normalized to lowercase.
-				 */
-				.replace(/\b[A-Z]/, (firstLetter) => firstLetter.toLowerCase())
-				/**
-				 * Convert /[handle].js and /[...handle].js to /:handle.js
-				 */
-				.replace(/\[(?:[.]{3})?(\w+?)\]/g, (_match, param) => `:${param}`);
-
-			if (path.endsWith("/") && path !== "/") {
-				path = path.substring(0, path.length - 1);
-			}
-
-			if (!pages[key]?.default && !lazyPages[key]) {
-				// eslint-disable-next-line no-console
-				console.warn(`${key} doesn't export a default React component`);
-			}
-			if (pages[key]?.default) {
-				const res = {
-					path,
-					component: pages[key].default
-				};
-				return res;
-			} else if (lazyPages[key]) {
-				// Remove lazy suffix
-				path = path.replace(/\.lazy$/i, "").replace(/\/index$/i, "/");
-				return {
-					isLazyPage: true,
-					path,
-					component: lazyPages[key]
-				};
-			}
-			return {};
-		})
-		.filter((route) => route.component);
 }

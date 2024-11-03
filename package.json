@@ -1,9 +1,6 @@
 {
 	"name": "custom-codes",
 	"version": "1.0.0",
-	"author": "Nguyen Tien Hau",
-	"license": "ISC",
-	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"database:init": "sequelize db:drop && sequelize db:create && sequelize db:migrate && sequelize db:seed:all",
